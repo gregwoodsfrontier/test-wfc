@@ -50,6 +50,27 @@ const allOptionsinBool = []
 for (let i = 0; i < spriteNames.length; i++) {
     allOptionsinBool.push(true)
 }
+enum EST {
+    G = "grass", R = "road", GDF0 = "grassDot_f0", GDF1 = "grassDot_f1"
+}
+const tileSetsA = {
+    edgeType: ["grass", "road", "grassDot_f0", "grassDot_f1"],
+    spriteKeys: [
+        "grass 0",
+        "grasscorner 0", "grasscorner 1", "grasscorner 2", "grasscorner 3",
+        "roadturn 0", "roadturn 1", "roadturn 2", "roadturn 3",
+        "road 0", "road 1", "road 2", "road 3",
+    ],
+    edgeSockets: [
+        [EST.G, EST.G, EST.G, EST.G],
+        [EST.GDF0, EST.GDF1, EST.R, EST.R],
+        [EST.GDF1, EST.R, EST.R, EST.GDF0],
+        [EST.R, EST.R, EST.GDF0, EST.GDF1],
+        [EST.R, EST.GDF0, EST.GDF1, EST.R],
+    ]
+
+}
+
 const TileSets: TileData[] = [
     {
         key: spriteNames[0],
