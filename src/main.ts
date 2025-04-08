@@ -6,26 +6,7 @@ enum Direction {
     SOUTH,
     EAST
 }
-enum TileName {
-    G0,
-    C0, C1, C2, C3,
-    CC0, CC1, CC2, CC3,
-    CT0, CT1, CT2, CT3
-}
-enum EdgeSocketType {
-    GRASS,
-    CLIFF_RIGHT_BOT,
-    CLIFF_RIGHT_TOP,
-    CLIFF_LEFT_BOT,
-    CLIFF_LEFT_TOP,
-    CLIFF_WIDE,
-    CLIFF_NARR
-}
-type TileData = {
-    key: string,
-    edgeSocket: EdgeSocketType[],
-    neighbors: number[]
-}
+
 type Cell = {
     tileX: number,
     tileY: number
@@ -40,20 +21,12 @@ const GRID_WIDTH_NO = 8;
 const GRID_HEIGHT_NO = 8;
 const CELL_SIZE = 48;
 const grid: Cell[] = [];
-const spriteNames = [
-    "grass 0",
-    "cliff 0", "cliff 1", "cliff 2", "cliff 3",
-    "cliffcorner 0", "cliffcorner 1", "cliffcorner 2", "cliffcorner 3",
-    "cliffturn 0", "cliffturn 1", "cliffturn 2", "cliffturn 3",
-]
-const allOptionsinBool = []
-for (let i = 0; i < spriteNames.length; i++) {
-    allOptionsinBool.push(true)
-}
+
 enum EST {
     G = "grass", R = "road", GDF0 = "grassDot_f0", GDF1 = "grassDot_f1"
 }
-const tileSetsA = {
+
+const tileSets = {
     edgeType: ["grass", "road", "grassDot_f0", "grassDot_f1"],
     spriteKeys: [
         "grass 0",
@@ -67,27 +40,10 @@ const tileSetsA = {
         [EST.GDF1, EST.R, EST.R, EST.GDF0],
         [EST.R, EST.R, EST.GDF0, EST.GDF1],
         [EST.R, EST.GDF0, EST.GDF1, EST.R],
-    ]
+    ],
+    neighbors: []
 
 }
-
-const TileSets: TileData[] = [
-    {
-        key: spriteNames[0],
-        edgeSocket: [EdgeSocketType.GRASS, EdgeSocketType.GRASS, EdgeSocketType.GRASS, EdgeSocketType.GRASS],
-        neighbors: [0, 0, 0, 0],
-    },
-    {
-        key: spriteNames[TileName.C0],
-        edgeSocket: [
-            EdgeSocketType.GRASS,
-            EdgeSocketType.CLIFF_WIDE,
-            EdgeSocketType.GRASS,
-            EdgeSocketType.CLIFF_WIDE,
-        ],
-        neighbors: [0, 0, 0, 0],
-    }
-]
 
 function changeOptions(input: number, index: number, isAdd: boolean) {
     if (isAdd === true) {
@@ -110,9 +66,21 @@ function initGrid() {
                 tileX: x,
                 tileY: y,
                 collapsed: false,
-                options: Math.pow(2, spriteNames.length) - 1
+                options: Math.pow(2, tileSets.spriteKeys.length) - 1
                 //options: allOptionsinBool
             })
+        }
+    }
+}
+
+function updateGridSprite() {
+    for (let i = 0; i < grid.length; i++) {
+        if (grid[i].collapsed) continue
+
+        let p = Math.log2(grid[i].options)
+        if (p === Math.floor(p)) {
+            gridContain.children[i].sprite = tileSets.spriteKeys[p]
+            grid[i].collapsed = true
         }
     }
 }
@@ -120,7 +88,7 @@ function initGrid() {
 
 k.loadRoot("./"); // A good idea for Itch.io publishing later
 k.loadSprite("bean", "sprites/bean.png");
-for (let names of spriteNames) {
+for (let names of tileSets.spriteKeys) {
     k.loadSprite(names, "Summer/" + names + ".png")
 }
 
@@ -132,25 +100,20 @@ for (let j = 0; j < GRID_HEIGHT_NO; j++) {
     for (let i = 0; i < GRID_WIDTH_NO; i++) {
         gridContain.add([
             k.pos(0 + i * (CELL_SIZE * 2 + 10), 0 + j * (CELL_SIZE * 2 + 10)),
-            k.sprite(spriteNames[TileName.G0]),
+            k.sprite(tileSets.spriteKeys[0]),
             k.scale(2)
         ])
     }
 }
 
-gridContain.children[4 * GRID_WIDTH_NO + 4].sprite = spriteNames[TileName.C1]
-gridContain.children[3 * GRID_WIDTH_NO + 4].sprite = spriteNames[TileName.CT2]
-gridContain.children[5 * GRID_WIDTH_NO + 4].sprite = spriteNames[TileName.CC1]
-//gridContain.children[4 * GRID_WIDTH_NO + 4].sprite = spriteNames[TileName.C1]
-
-
-
 k.add([k.pos(120, 80), k.sprite("bean")]);
 
 initGrid()
 
-k.debug.log("oh hhi")
-k.debug.log("1100 add 0100: ", Number(changeOptions(0b1100, 2, true)).toString(2))
-k.debug.log("1000 sub 0100: ", Number(changeOptions(0b1000, 2, false)).toString(2))
+// grid[28].options = 16 update grid is working
+
+k.onUpdate(() => {
+    updateGridSprite()
+})
 
 k.onClick(() => k.addKaboom(k.mousePos()));
