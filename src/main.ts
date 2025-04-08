@@ -164,6 +164,19 @@ function calcNeighborTilesForEachTile() {
   }
 }
 
+function reduceEntrophy() {
+    const collapsedCells = grid.filter(e => e.collapsed === true)
+    for (let element of collapsedCells) {
+        const { tileX, tileY, options } = element
+        const tileIdx = Math.log2(options)
+        // check North
+        if (tileY - 1 < 0) { console.log("No valid cells on the north") } else {
+            let northCell = grid.filter((e) => e.tileY == tileY - 1 && e.tileX == tileX);
+            let northNeighborOptionBit = dec2binString(tileSets.neighbors[tileIdx][Direction.NORTH])
+        }
+    }
+}
+
 k.loadRoot("./"); // A good idea for Itch.io publishing later
 k.loadSprite("bean", "sprites/bean.png");
 k.loadSprite("w", "Circles/w.png");
@@ -190,6 +203,8 @@ initGrid();
 calcNeighborTilesForEachTile();
 
 pickRandomCell();
+
+// reduceEntrophy();
 
 //  update grid is working
 
