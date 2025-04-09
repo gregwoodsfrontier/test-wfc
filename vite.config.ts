@@ -17,6 +17,7 @@ export default defineConfig({
   base: "./",
   server: {
     port: 3001,
+    allowedHosts: true,
   },
   build: {
     // disable this for low bundle sizes

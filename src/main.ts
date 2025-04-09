@@ -3,9 +3,9 @@ import { tile } from "kaplay/dist/declaration/components";
 // import "kaplay/global"; // uncomment if you want to use without the k. prefix
 enum Direction {
   NORTH,
-  WEST,
-  SOUTH,
   EAST,
+  SOUTH,
+  WEST,
 }
 
 type Cell = {
@@ -29,7 +29,21 @@ enum EST {
   GDF1 = "grassDot_f1", // grass-dot ground
 }
 
-enum TSET { G, GC0, GC1, GC2, GC3, RT0, RT1, RT2, RT3, R0, R1, R2, R3 }
+enum TSET {
+  G,
+  GC0,
+  GC1,
+  GC2,
+  GC3,
+  RT0,
+  RT1,
+  RT2,
+  RT3,
+  R0,
+  R1,
+  R2,
+  R3,
+}
 
 const tileSets = {
   edgeType: ["grass", "road", "grassDot_f0", "grassDot_f1"],
@@ -110,7 +124,7 @@ function initGrid() {
 
 function updateGridSprite() {
   for (let i = 0; i < grid.length; i++) {
-    if (grid[i].collapsed) continue;
+    // if (grid[i].collapsed) continue;
 
     let p = Math.log2(grid[i].options);
     if (p === Math.floor(p)) {
@@ -122,6 +136,7 @@ function updateGridSprite() {
 
 function pickRandomCell() {
   grid[28].options = 1;
+  grid[28].collapsed = true;
 }
 
 function dec2binString(input: number) {
@@ -139,26 +154,26 @@ function calcNeighborTilesForEachTile() {
     let IdxToLookAt = i;
     for (let j = 0; j < 4; j++) {
       // let directionToLook = j, north for example
-      console.log("current dir: ", j);
+      // console.log("current dir: ", j);
       for (let k = 0; k < tileSets.spriteKeys.length; k++) {
         // it can compare with the same tile
         let IdxToCheckWith = k;
         if (compareEdges(j, IdxToLookAt, IdxToCheckWith)) {
-          tileSets.neighbors[i][k] = changeOptions(
-            tileSets.neighbors[i][k],
-            j,
+          tileSets.neighbors[i][j] = changeOptions(
+            tileSets.neighbors[i][j],
+            k,
             true
           );
-          console.log(
-            "added tile ",
-            tileSets.spriteKeys[k],
-            " to tile ",
-            tileSets.spriteKeys[i],
-            " in direction ",
-            j
-          );
+          // console.log(
+          //   "added tile ",
+          //   tileSets.spriteKeys[k],
+          //   " to tile ",
+          //   tileSets.spriteKeys[i],
+          //   " in direction ",
+          //   j
+          // );
         } else {
-          console.log("not matching");
+          // console.log("not matching");
           continue;
         }
       }
@@ -167,39 +182,100 @@ function calcNeighborTilesForEachTile() {
 }
 
 function encodeOptions(arr: TSET[]) {
-  let a = 0
+  let a = 0;
   for (let el of arr) {
-    a += Math.pow(2, el)
+    a += Math.pow(2, el);
   }
-  return a
+  return a;
 }
 
-function decodeOptions(_x: number) {
+function decodeOptions2(_x: number) {
   if (_x > Math.pow(2, tileSets.spriteKeys.length) - 1) {
-    console.error("number cannot exceed the number of tilesets available")
-    return 0
+    console.error("number cannot exceed the number of tilesets available");
+    return 0;
   } else {
-    let ans = []
-    let ab = dec2binString(_x)
-    let alen = ab.length
+    let ans = [];
+    let ab = dec2binString(_x);
+    let alen = ab.length;
     for (let i = alen - 1; i >= 0; i--) {
       if (ab[i] == "1") {
-        ans.push(alen - 1 - i)
+        ans.push(alen - 1 - i);
       }
     }
-    return ans
+    return ans;
   }
+}
+
+function decodeOptions(_x: string) {
+  let ans = [];
+  let alen = _x.length;
+  for (let i = alen - 1; i >= 0; i--) {
+    if (_x[i] == "1") {
+      ans.push(alen - 1 - i);
+    }
+  }
+  return ans;
 }
 
 function reduceEntrophy() {
-  const collapsedCells = grid.filter(e => e.collapsed === true)
+  const collapsedCells = grid.filter((e) => e.collapsed === true);
   for (let element of collapsedCells) {
-    const { tileX, tileY, options } = element
-    const tileIdx = Math.log2(options)
-    // check North
-    if (tileY - 1 < 0) { console.log("No valid cells on the north") } else {
-      let northCell = grid.filter((e) => e.tileY == tileY - 1 && e.tileX == tileX);
-      let northNeighborOptionBit = dec2binString(tileSets.neighbors[tileIdx][Direction.NORTH])
+    const { tileX, tileY, options } = element;
+    const tileIdx = Math.log2(options);
+    for (let dir = 0; dir < 4; dir++) {
+      const deltaTile = { x: 0, y: 0, msg: "" };
+      switch (dir) {
+        case Direction.NORTH: {
+          deltaTile.x = 0;
+          deltaTile.y = -1;
+          deltaTile.msg = "north";
+          break;
+        }
+        case Direction.EAST: {
+          deltaTile.x = 1;
+          deltaTile.y = 0;
+          deltaTile.msg = "east";
+          break;
+        }
+        case Direction.SOUTH: {
+          deltaTile.x = 0;
+          deltaTile.y = 1;
+          deltaTile.msg = "south";
+          break;
+        }
+        case Direction.WEST: {
+          deltaTile.x = -1;
+          deltaTile.y = 0;
+          deltaTile.msg = "west";
+          break;
+        }
+      }
+      if (
+        tileY + deltaTile.y < 0 ||
+        tileY + deltaTile.y >= GRID_HEIGHT_NO ||
+        tileX + deltaTile.x < 0 ||
+        tileX + deltaTile.x >= GRID_WIDTH_NO
+      ) {
+        console.error(`No valid cells on the ${deltaTile.msg}`);
+      }
+    }
+
+    // check North. it is working. Make it into a loop
+    if (tileY - 1 < 0) {
+      console.log("No valid cells on the north");
+    } else {
+      let northCell = grid.filter(
+        (e) => e.tileY == tileY - 1 && e.tileX == tileX
+      );
+      let northNeighborOptionBit = dec2binString(
+        tileSets.neighbors[tileIdx][Direction.NORTH]
+      );
+      console.log(northNeighborOptionBit);
+      let northOptIdx = decodeOptions(northNeighborOptionBit);
+      const chosenIdx = k.choose(northOptIdx);
+      console.table(northOptIdx);
+      console.log("north chosen Idx: ", chosenIdx);
+      northCell[0].options = Math.pow(2, chosenIdx);
     }
   }
 }
@@ -229,9 +305,11 @@ initGrid();
 
 calcNeighborTilesForEachTile();
 
+console.log(tileSets);
+
 pickRandomCell();
 
-// reduceEntrophy();
+reduceEntrophy();
 
 //  update grid is working
 //  in update, it should pick a random cell. If there are updated cells, pick from those cells
