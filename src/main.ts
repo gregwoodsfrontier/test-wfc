@@ -29,6 +29,8 @@ enum EST {
   GDF1 = "grassDot_f1", // grass-dot ground
 }
 
+enum TSET { G, GC0, GC1, GC2, GC3, RT0, RT1, RT2, RT3, R0, R1, R2, R3 }
+
 const tileSets = {
   edgeType: ["grass", "road", "grassDot_f0", "grassDot_f1"],
   spriteKeys: [
@@ -164,17 +166,42 @@ function calcNeighborTilesForEachTile() {
   }
 }
 
-function reduceEntrophy() {
-    const collapsedCells = grid.filter(e => e.collapsed === true)
-    for (let element of collapsedCells) {
-        const { tileX, tileY, options } = element
-        const tileIdx = Math.log2(options)
-        // check North
-        if (tileY - 1 < 0) { console.log("No valid cells on the north") } else {
-            let northCell = grid.filter((e) => e.tileY == tileY - 1 && e.tileX == tileX);
-            let northNeighborOptionBit = dec2binString(tileSets.neighbors[tileIdx][Direction.NORTH])
-        }
+function encodeOptions(arr: TSET[]) {
+  let a = 0
+  for (let el of arr) {
+    a += Math.pow(2, el)
+  }
+  return a
+}
+
+function decodeOptions(_x: number) {
+  if (_x > Math.pow(2, tileSets.spriteKeys.length) - 1) {
+    console.error("number cannot exceed the number of tilesets available")
+    return 0
+  } else {
+    let ans = []
+    let ab = dec2binString(_x)
+    let alen = ab.length
+    for (let i = alen - 1; i >= 0; i--) {
+      if (ab[i] == "1") {
+        ans.push(alen - 1 - i)
+      }
     }
+    return ans
+  }
+}
+
+function reduceEntrophy() {
+  const collapsedCells = grid.filter(e => e.collapsed === true)
+  for (let element of collapsedCells) {
+    const { tileX, tileY, options } = element
+    const tileIdx = Math.log2(options)
+    // check North
+    if (tileY - 1 < 0) { console.log("No valid cells on the north") } else {
+      let northCell = grid.filter((e) => e.tileY == tileY - 1 && e.tileX == tileX);
+      let northNeighborOptionBit = dec2binString(tileSets.neighbors[tileIdx][Direction.NORTH])
+    }
+  }
 }
 
 k.loadRoot("./"); // A good idea for Itch.io publishing later
@@ -207,6 +234,11 @@ pickRandomCell();
 // reduceEntrophy();
 
 //  update grid is working
+//  in update, it should pick a random cell. If there are updated cells, pick from those cells
+//  collapse that cell into a single option
+//  update the neighbor or entrophy of adjacent cell
+//  pick from the cells of the least entrophy
+//  repeat collapse
 
 k.onUpdate(() => {
   updateGridSprite();
