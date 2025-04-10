@@ -145,7 +145,16 @@ function dec2binString(input: number) {
 
 function compareEdges(edgeDir: Direction, idxA: number, idxB: number) {
   const { edgeSockets } = tileSets;
-  return edgeSockets[idxA][edgeDir] === edgeSockets[idxB][(edgeDir + 2) % 4];
+  if (
+    edgeSockets[idxA][edgeDir] != EST.GDF0 &&
+    edgeSockets[idxA][edgeDir] != EST.GDF1
+  ) {
+    return edgeSockets[idxA][edgeDir] === edgeSockets[idxB][(edgeDir + 2) % 4];
+  } else if (edgeSockets[idxA][edgeDir] == EST.GDF0) {
+    return edgeSockets[idxB][(edgeDir + 2) % 4] == EST.GDF1;
+  } else {
+    return edgeSockets[idxB][(edgeDir + 2) % 4] == EST.GDF0;
+  }
 }
 
 function calcNeighborTilesForEachTile() {
@@ -189,10 +198,10 @@ function encodeOptions(arr: TSET[]) {
   return a;
 }
 
-function decodeOptions2(_x: number) {
+function decodeOptionsInt(_x: number): number[] {
   if (_x > Math.pow(2, tileSets.spriteKeys.length) - 1) {
     console.error("number cannot exceed the number of tilesets available");
-    return 0;
+    return [-1];
   } else {
     let ans = [];
     let ab = dec2binString(_x);
@@ -257,27 +266,87 @@ function reduceEntrophy() {
         tileX + deltaTile.x >= GRID_WIDTH_NO
       ) {
         console.error(`No valid cells on the ${deltaTile.msg}`);
+        continue;
       }
+      const cg = grid.filter(
+        (e) => e.tileX == tileX + deltaTile.x && e.tileY == tileY + deltaTile.y
+      );
+      const cellToCheck = cg[0];
+      if (cellToCheck.collapsed) {
+        console.info("cell is collapased. Skipping it.");
+      }
+      console.log(tileIdx);
+      const neighborOption = tileSets.neighbors[tileIdx][dir]; // in integers
+      if (!neighborOption) {
+        console.error(
+          "no options in tileIdx: ",
+          tileIdx,
+          " in ",
+          deltaTile.msg
+        );
+        continue;
+      }
+      const neighborTileIdxGp = decodeOptionsInt(neighborOption);
+      if (neighborTileIdxGp[0] < 0) {
+        console.error(
+          "number cannot exceed the number of tilesets available OR no options left."
+        );
+        continue;
+      }
+      // this code should remove the options that are not available with the one in neighbors
+      cellToCheck.options = cellToCheck.options & neighborOption;
+      console.log("dir: ", deltaTile.msg);
+      console.log("current encode options: ", cellToCheck.options);
+      console.log("array: ", neighborTileIdxGp);
+      // if (cellToCheck.options < Math.pow(2, tileSets.spriteKeys.length) - 1) {
+      //   for (let el of neighborTileIdxGp) {
+      //     cellToCheck.options = changeOptions(cellToCheck.options, el, true);
+      //   }
+      // }
     }
 
     // check North. it is working. Make it into a loop
-    if (tileY - 1 < 0) {
-      console.log("No valid cells on the north");
-    } else {
-      let northCell = grid.filter(
-        (e) => e.tileY == tileY - 1 && e.tileX == tileX
-      );
-      let northNeighborOptionBit = dec2binString(
-        tileSets.neighbors[tileIdx][Direction.NORTH]
-      );
-      console.log(northNeighborOptionBit);
-      let northOptIdx = decodeOptions(northNeighborOptionBit);
-      const chosenIdx = k.choose(northOptIdx);
-      console.table(northOptIdx);
-      console.log("north chosen Idx: ", chosenIdx);
-      northCell[0].options = Math.pow(2, chosenIdx);
-    }
+    // if (tileY - 1 < 0) {
+    //   console.log("No valid cells on the north");
+    // } else {
+    //   let northCell = grid.filter(
+    //     (e) => e.tileY == tileY - 1 && e.tileX == tileX
+    //   );
+    //   let northNeighborOptionBit = dec2binString(
+    //     tileSets.neighbors[tileIdx][Direction.NORTH]
+    //   );
+    //   console.log(northNeighborOptionBit);
+    //   let northOptIdx = decodeOptions(northNeighborOptionBit);
+    //   const chosenIdx = k.choose(northOptIdx);
+    //   console.table(northOptIdx);
+    //   console.log("north chosen Idx: ", chosenIdx);
+    //   northCell[0].options = Math.pow(2, chosenIdx);
+    // }
   }
+}
+
+function collapseLeastEntrophy() {
+  const sortedGridByLeastEntrophy = grid
+    .filter((el) => !el.collapsed)
+    .toSorted((e1, e2) => {
+      if (decodeOptionsInt(e1.options)[0] < -1) {
+        console.error("e1 has no valid options!");
+        return 0;
+      }
+      if (decodeOptionsInt(e2.options)[0] < -1) {
+        console.error("e2 has no valid options!");
+        return 0;
+      }
+      const e1l = decodeOptionsInt(e1.options).length;
+      const e2l = decodeOptionsInt(e2.options).length;
+      return e1l - e2l;
+    });
+  console.log(sortedGridByLeastEntrophy);
+  const cellToCollapse = sortedGridByLeastEntrophy[0];
+  const indices = decodeOptionsInt(cellToCollapse.options);
+  const chooseIdx = k.choose(indices);
+  cellToCollapse.options = Math.pow(2, chooseIdx);
+  cellToCollapse.collapsed = true;
 }
 
 k.loadRoot("./"); // A good idea for Itch.io publishing later
@@ -309,7 +378,11 @@ console.log(tileSets);
 
 pickRandomCell();
 
-reduceEntrophy();
+for (let i = 0; i < 10; i++) {
+  reduceEntrophy();
+
+  collapseLeastEntrophy();
+}
 
 //  update grid is working
 //  in update, it should pick a random cell. If there are updated cells, pick from those cells
